@@ -1,0 +1,40 @@
+# Minimal OpenTelemetry Collector configuration for the Puppet report
+# processor.
+#
+# Run it with podman:
+#   podman run --rm -p 4318:4318 -p 8889:8889 \
+#     -v ./examples/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:z \
+#     docker.io/otel/opentelemetry-collector-contrib:latest
+#
+# Metrics are then scrapeable at http://localhost:8889/metrics
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        # The processor sends OTLP over HTTP to /v1/metrics on this port.
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 10s
+
+exporters:
+  # Writes the received metrics to the collector log. Useful when first
+  # verifying that reports are arriving.
+  debug:
+    verbosity: detailed
+
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    # Data point attributes become Prometheus labels, so puppet.node.name is
+    # published as puppet_node_name.
+    resource_to_telemetry_conversion:
+      enabled: true
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug, prometheus]

@@ -1,0 +1,74 @@
+# Configuration for the OpenTelemetry report processor.
+#
+# Install as /etc/puppetlabs/puppet/otel.yaml, that is, next to puppet.conf.
+#
+# Every key is optional. Values are resolved highest precedence first:
+#   1. a key in this file
+#   2. the standard OTEL_* environment variable, where one exists
+#   3. the built-in default shown below
+#
+# This file may be omitted entirely, in which case the processor is configured
+# from the environment alone. A file that exists but cannot be parsed is an
+# error rather than an absence of configuration.
+
+# Master switch for the processor.
+# Default: true
+enabled: true
+
+# Base OTLP HTTP endpoint of your collector. The signal specific path
+# (/v1/metrics) is appended automatically if you do not supply it.
+# Environment: OTEL_EXPORTER_OTLP_ENDPOINT
+# Default: http://localhost:4318
+endpoint: http://localhost:4318
+
+# service.name of the emitting process, that is, this server.
+# Environment: OTEL_SERVICE_NAME
+# Default: openvox-server
+service_name: openvox-server
+
+# Export timeout in SECONDS. Note that the environment variable equivalent is
+# specified in milliseconds, per the OpenTelemetry specification, and is
+# converted automatically.
+# Environment: OTEL_EXPORTER_OTLP_TIMEOUT (milliseconds)
+# Default: 10
+timeout: 10
+
+# How often the periodic reader exports, in seconds. Reports are also flushed
+# immediately as they arrive, so this is a backstop rather than the main path.
+# No environment variable equivalent.
+# Default: 30
+export_interval: 30
+
+# Extra resource attributes describing this server. Merged with
+# OTEL_RESOURCE_ATTRIBUTES; entries here win on conflict.
+# resource_attributes:
+#   deployment.environment.name: production
+#   service.namespace: infrastructure
+
+# Headers sent with each OTLP request, for example an authentication token.
+# If this key is present it REPLACES OTEL_EXPORTER_OTLP_HEADERS rather than
+# merging with it.
+# headers:
+#   authorization: Bearer your-token-here
+
+# Optional allowlist of Puppet environments to report on. Omit the key, or use
+# an empty list, to report on every environment.
+# environments:
+#   - production
+#   - staging
+
+metrics:
+  # Default: true
+  enabled: true
+
+  # Attach puppet.node.name to every data point. Set to false to aggregate all
+  # nodes together, which bounds time series cardinality on large installations
+  # at the cost of losing per-node detail.
+  # Default: true
+  node_attribute: true
+
+traces:
+  # Opt-in. A catalog with thousands of resources produces a span per resource,
+  # so enabling this is a deliberate choice. Not yet implemented.
+  # Default: false
+  enabled: false
