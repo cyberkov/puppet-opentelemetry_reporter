@@ -1,0 +1,35 @@
+# Collector configuration for the end to end test.
+#
+# Metrics are exposed for scraping on :8889 and echoed to the container log,
+# so a failing test can be diagnosed from either side.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # No batching delay: the test asserts on metrics shortly after a single
+  # agent run, and waiting on a batch timeout would only add flakiness.
+  batch:
+    timeout: 1s
+
+exporters:
+  debug:
+    verbosity: detailed
+
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug, prometheus]

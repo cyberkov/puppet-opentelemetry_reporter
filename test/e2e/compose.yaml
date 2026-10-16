@@ -1,0 +1,64 @@
+# End to end test topology: agent -> server -> collector.
+#
+# Brought up by run.sh, which waits for the server, triggers an agent run and
+# asserts on the collector's Prometheus endpoint.
+
+services:
+  collector:
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:latest
+    container_name: otel-e2e-collector
+    command: ['--config=/etc/otelcol-contrib/config.yaml']
+    volumes:
+      - ./collector.yaml:/etc/otelcol-contrib/config.yaml:z
+    ports:
+      # Exposed so the assertions can scrape from the host.
+      - '8889:8889'
+    networks:
+      - puppet
+
+  server:
+    image: ghcr.io/openvoxproject/openvoxserver:8
+    container_name: otel-e2e-server
+    hostname: puppet
+    environment:
+      # The agent connects to "puppet"; the certificate must match.
+      CERTNAME: puppet
+      DNS_ALT_NAMES: puppet,server,localhost
+      # Enable the processor. The image reads OPENVOX_REPORTS, not
+      # PUPPETSERVER_REPORTS, and writes it to the [server] section of
+      # puppet.conf from /container-entrypoint.d/85-setup-storeconfigs.sh.
+      #
+      # The image default is "puppetdb", which must be overridden: there is no
+      # PuppetDB in this stack, and leaving it would bury the result in
+      # unrelated report submission errors. "store" keeps reports on disk.
+      OPENVOX_REPORTS: store,opentelemetry
+      # The server JVM is the memory hungry part of this stack.
+      JAVA_ARGS: '-Xms512m -Xmx1g'
+    volumes:
+      # The generated single file processor, installed into a module so that
+      # the server autoloads it the same way pluginsync would.
+      - ../../dist/opentelemetry.rb:/etc/puppetlabs/code/environments/production/modules/opentelemetry_reporter/lib/puppet/reports/opentelemetry.rb:z
+      - ./otel.yaml:/etc/puppetlabs/puppet/otel.yaml:z
+      - ./site.pp:/etc/puppetlabs/code/environments/production/manifests/site.pp:z
+    depends_on:
+      - collector
+    networks:
+      - puppet
+
+  agent:
+    image: ghcr.io/openvoxproject/openvoxagent:8
+    container_name: otel-e2e-agent
+    hostname: agent.example.com
+    # The image entrypoint is the puppet binary itself, so a bare command is
+    # parsed as a puppet subcommand. The entrypoint is overridden here to keep
+    # the container idling, and run.sh execs the agent into it on demand.
+    entrypoint: ['sleep']
+    command: ['infinity']
+    depends_on:
+      - server
+    networks:
+      - puppet
+
+networks:
+  puppet:
+    driver: bridge

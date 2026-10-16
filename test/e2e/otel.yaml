@@ -1,0 +1,24 @@
+# Server side configuration for the end to end test.
+#
+# Mounted to /etc/puppetlabs/puppet/otel.yaml inside the server container.
+
+enabled: true
+
+# "collector" is the service name on the compose network. The /v1/metrics
+# path is appended by the processor.
+endpoint: http://collector:4318
+
+service_name: openvox-server
+
+# Short interval so the test does not wait long. The processor also flushes
+# on each report, so this is only a backstop.
+export_interval: 5
+
+timeout: 10
+
+metrics:
+  enabled: true
+  node_attribute: true
+
+traces:
+  enabled: false
