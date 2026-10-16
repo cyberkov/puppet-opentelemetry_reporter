@@ -1,4 +1,5 @@
 pkg/
+dist/
 Gemfile.lock
 Gemfile.local
 vendor/
