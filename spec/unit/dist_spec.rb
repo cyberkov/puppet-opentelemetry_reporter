@@ -33,8 +33,8 @@ describe 'dist/opentelemetry.rb' do
     # Only the require lines are inspected; the generated banner legitimately
     # names the gems in its installation note.
     header = File.read(dist).split('# --- ').first
-    hoisted = header.lines.grep(/^require/)
-    expect(hoisted).not_to include(a_string_matching(/opentelemetry/))
+    hoisted = header.lines.grep(%r{^require})
+    expect(hoisted).not_to include(a_string_matching(%r{opentelemetry}))
   end
 
   it 'registers the report processor when loaded in a clean process' do

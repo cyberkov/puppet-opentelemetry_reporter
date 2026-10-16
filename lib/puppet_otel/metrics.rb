@@ -15,13 +15,13 @@ module PuppetOtel
     # "1" is the conventional unit for a dimensionless count.
     CATEGORIES = {
       'resources' => { name: 'puppet.report.resources', unit: '1',
-                       description: 'Resources in the last Puppet run, broken down by state' },
+                       description: 'Resources in the last Puppet run, broken down by state', },
       'time' => { name: 'puppet.report.time', unit: 's',
-                  description: 'Time taken by the last Puppet run, broken down by resource type' },
+                  description: 'Time taken by the last Puppet run, broken down by resource type', },
       'changes' => { name: 'puppet.report.changes', unit: '1',
-                     description: 'Changed resources in the last Puppet run' },
+                     description: 'Changed resources in the last Puppet run', },
       'events' => { name: 'puppet.report.events', unit: '1',
-                    description: 'Resource application events in the last Puppet run' },
+                    description: 'Resource application events in the last Puppet run', },
     }.freeze
 
     RUN_STATUSES = %w[failed changed unchanged].freeze
@@ -107,7 +107,7 @@ module PuppetOtel
       gauge = gauge_for(name: 'puppet.run.status', unit: '1',
                         description: 'Status of the last Puppet run')
       RUN_STATUSES.each do |candidate|
-        gauge.record(status.to_s == candidate ? 1 : 0,
+        gauge.record((status.to_s == candidate) ? 1 : 0,
                      attributes: attributes.merge('puppet.run.status' => candidate))
       end
     end
@@ -119,7 +119,7 @@ module PuppetOtel
       gauge = gauge_for(name: 'puppet.cached_catalog.status', unit: '1',
                         description: 'Whether a cached catalog was used, and why')
       CACHED_CATALOG_STATUSES.each do |candidate|
-        gauge.record(status.to_s == candidate ? 1 : 0,
+        gauge.record((status.to_s == candidate) ? 1 : 0,
                      attributes: attributes.merge('puppet.cached_catalog_status' => candidate))
       end
     end
@@ -150,7 +150,7 @@ module PuppetOtel
       return nil if time.nil? || !time.respond_to?(:values)
 
       entry = time.values.find { |e| e.respond_to?(:[]) && e[0].to_s == 'total' }
-      entry && entry[2].is_a?(Numeric) ? entry[2] : nil
+      (entry && entry[2].is_a?(Numeric)) ? entry[2] : nil
     end
 
     # Instruments are created once per meter and reused, because creating a

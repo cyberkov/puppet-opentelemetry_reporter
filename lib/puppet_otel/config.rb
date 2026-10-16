@@ -127,7 +127,7 @@ module PuppetOtel
     def load_file(path)
       return {} if path.nil? || !File.exist?(path)
 
-      loaded = YAML.safe_load(File.read(path), permitted_classes: [], aliases: true)
+      loaded = YAML.safe_load_file(path, permitted_classes: [], aliases: true)
       return {} if loaded.nil? || loaded == false
 
       raise ConfigError, "#{path}: expected a YAML mapping, got #{loaded.class}" unless loaded.is_a?(Hash)

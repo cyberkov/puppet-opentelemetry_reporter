@@ -63,7 +63,7 @@ describe PuppetOtel::Config do
         config
       end
     rescue PuppetOtel::Config::ConfigError => e
-      expect(e.message).to match(/invalid YAML/)
+      expect(e.message).to match(%r{invalid YAML})
     else
       raise 'expected ConfigError to be raised'
     end
@@ -71,7 +71,7 @@ describe PuppetOtel::Config do
     it 'raises ConfigError when the document is not a mapping' do
       expect do
         with_config_file("- a\n- b\n") { |c| c }
-      end.to raise_error(PuppetOtel::Config::ConfigError, /expected a YAML mapping/)
+      end.to raise_error(PuppetOtel::Config::ConfigError, %r{expected a YAML mapping})
     end
   end
 

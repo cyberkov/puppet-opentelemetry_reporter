@@ -49,7 +49,7 @@ describe 'opentelemetry report processor' do
   end
 
   it 'documents itself' do
-    expect(processor.doc).to match(/OpenTelemetry/)
+    expect(processor.doc).to match(%r{OpenTelemetry})
   end
 
   it 'records metrics and flushes them' do
@@ -88,13 +88,13 @@ describe 'opentelemetry report processor' do
 
   it 'logs and does not raise when the SDK fails' do
     allow(PuppetOtel::SDK).to receive(:meter).and_raise(StandardError, 'boom')
-    expect(Puppet).to receive(:err).with(/could not process report/)
+    expect(Puppet).to receive(:err).with(%r{could not process report})
     expect { report_for.process }.not_to raise_error
   end
 
   it 'does not raise when the configuration file is malformed' do
     write_config("broken: [unclosed\n")
-    expect(Puppet).to receive(:err).with(/could not process report/)
+    expect(Puppet).to receive(:err).with(%r{could not process report})
     expect { report_for.process }.not_to raise_error
   end
 end
