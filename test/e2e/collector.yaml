@@ -21,8 +21,11 @@ exporters:
 
   prometheus:
     endpoint: 0.0.0.0:8889
-    resource_to_telemetry_conversion:
-      enabled: true
+    # Copies resource attributes onto every metric, so the test can assert on
+    # service_name and host_name without a target_info join. Replaces
+    # resource_to_telemetry_conversion, which is deprecated.
+    resource_constant_labels:
+      included: ["*"]
 
 service:
   telemetry:

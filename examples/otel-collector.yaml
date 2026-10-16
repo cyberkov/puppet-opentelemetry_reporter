@@ -29,8 +29,14 @@ exporters:
     endpoint: 0.0.0.0:8889
     # Data point attributes become Prometheus labels, so puppet.node.name is
     # published as puppet_node_name.
-    resource_to_telemetry_conversion:
-      enabled: true
+    #
+    # Resource attributes are otherwise only published on target_info, which
+    # would need a join to query. "*" copies all of them onto every metric, so
+    # service_name, host_name and deployment_environment_name are directly
+    # selectable. This replaces resource_to_telemetry_conversion, which is
+    # deprecated.
+    resource_constant_labels:
+      included: ["*"]
 
 service:
   pipelines:
