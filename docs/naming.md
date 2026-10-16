@@ -18,34 +18,55 @@ in conflict for the metric names themselves.
 
 Attribute names are a genuine divergence and are documented below.
 
-## Resource attributes
+## Resource vs. data point attributes
 
-Node identity belongs on the Resource, not on every data point. This both follows the
-conventions and bounds metric cardinality.
+A Resource describes *the process emitting the telemetry*. The report processor runs inside
+the OpenVox Server process and receives reports from many different agent nodes, so the
+reported node is **not** a property of the emitting process.
+
+Therefore:
+
+- the **Resource** describes the OpenVox Server itself, and is fixed for the lifetime of
+  the process
+- the **reported node** (its name, environment and run status) is carried as **data point
+  attributes**, because those values differ from one report to the next
+
+### Resource attributes (describe the server)
 
 | Attribute | Stability | Source |
 |---|---|---|
 | `service.name` | stable | `OTEL_SERVICE_NAME` / `otel.yaml`, default `openvox-server` |
-| `service.version` | stable | `report.puppet_version` |
-| `service.instance.id` | stable | `report.host` |
-| `host.name` | development | `report.host` (the Puppet node) |
-| `deployment.environment.name` | stable | `report.environment` |
+| `service.version` | stable | this module's version |
+| `host.name` | development | the hostname of the OpenVox Server process |
 
 Caveat: `host.name` is only at `development` stability in v1.44.0. It is nevertheless the
 correct released key for a host name and there is no stable alternative, so it is used as-is.
+
+### Data point attributes (describe the reported node)
+
+| Attribute | Stability | Source |
+|---|---|---|
+| `deployment.environment.name` | stable | `report.environment` |
+| `puppet.node.name` | custom | `report.host` |
+| `puppet.run.status` | custom | `report.status` |
+
+## Cardinality
+
+Attaching the node name to every data point means the number of series scales with the
+number of managed nodes. That is inherent to per-node reporting and cannot be avoided by
+moving the attribute to the Resource, since one process reports for all nodes.
+
+For large installations `node_attribute: false` omits `puppet.node.name`, which aggregates
+all nodes into per-environment series.
 
 ## Divergence from the Prometheus reporter
 
 | Prometheus reporter label | This module | Rationale |
 |---|---|---|
-| `host="..."` (metric label) | `host.name` + `service.instance.id` (resource attribute) | Released convention; removes unbounded per-node metric cardinality |
-| `environment="..."` (metric label) | `deployment.environment.name` (resource attribute) | `deployment.environment.name` is **stable** in v1.44.0 |
+| `host="..."` | `puppet.node.name` | Namespaced; no released key exists for "the node a report is about" |
+| `environment="..."` | `deployment.environment.name` | `deployment.environment.name` is **stable** in v1.44.0 |
 | `name="Total"` (capitalised label) | `puppet.metric.name="total"` (machine-readable id) | Conventions require lowercase, bounded values. The report's machine id is used, not its display label |
 | `state="failed"` | `puppet.run.status="failed"` | Namespaced under a stable custom prefix |
-
-Consumers that relied on `host`/`environment` as metric labels must read them from the
-resource instead. The Collector's `resource_to_telemetry_conversion` setting can restore
-them as labels verbatim when a drop-in replacement is required.
 
 ## Rejected: the `cicd` group
 
