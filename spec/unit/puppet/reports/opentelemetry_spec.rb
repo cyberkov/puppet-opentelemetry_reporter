@@ -34,14 +34,14 @@ describe 'opentelemetry report processor' do
 
   before do
     require 'puppet/reports/opentelemetry'
-    PuppetOtel::SDK.reset!
+    PuppetX::OpentelemetryReporter::SDK.reset!
     allow(Puppet.settings).to receive(:[]).with(:config).and_return(File.join(confdir, 'puppet.conf'))
-    allow(PuppetOtel::SDK).to receive_messages(meter: in_memory_meter, tracer: in_memory_tracer)
-    allow(PuppetOtel::SDK).to receive(:force_flush)
+    allow(PuppetX::OpentelemetryReporter::SDK).to receive_messages(meter: in_memory_meter, tracer: in_memory_tracer)
+    allow(PuppetX::OpentelemetryReporter::SDK).to receive(:force_flush)
   end
 
   after do
-    PuppetOtel::SDK.reset!
+    PuppetX::OpentelemetryReporter::SDK.reset!
     FileUtils.remove_entry(confdir)
   end
 
@@ -67,7 +67,7 @@ describe 'opentelemetry report processor' do
   it 'records metrics and flushes them' do
     write_config("endpoint: http://localhost:4318\n")
     report_for.process
-    expect(PuppetOtel::SDK).to have_received(:force_flush)
+    expect(PuppetX::OpentelemetryReporter::SDK).to have_received(:force_flush)
   end
 
   it 'does not register instruments again for later reports' do
@@ -82,26 +82,26 @@ describe 'opentelemetry report processor' do
   it 'does nothing when disabled' do
     write_config("enabled: false\n")
     report_for.process
-    expect(PuppetOtel::SDK).not_to have_received(:meter)
+    expect(PuppetX::OpentelemetryReporter::SDK).not_to have_received(:meter)
   end
 
   it 'does nothing when metrics are disabled' do
     write_config("metrics:\n  enabled: false\n")
     report_for.process
-    expect(PuppetOtel::SDK).not_to have_received(:meter)
+    expect(PuppetX::OpentelemetryReporter::SDK).not_to have_received(:meter)
   end
 
   it 'skips environments outside the allowlist' do
     write_config("environments:\n  - production\n")
     report_for(environment: 'development').process
-    expect(PuppetOtel::SDK).not_to have_received(:meter)
+    expect(PuppetX::OpentelemetryReporter::SDK).not_to have_received(:meter)
   end
 
   it 'processes environments inside the allowlist' do
     write_config("environments:\n  - production\n")
-    allow(PuppetOtel::SDK).to receive(:meter).and_return(nil)
+    allow(PuppetX::OpentelemetryReporter::SDK).to receive(:meter).and_return(nil)
     report_for(environment: 'production').process
-    expect(PuppetOtel::SDK).to have_received(:meter)
+    expect(PuppetX::OpentelemetryReporter::SDK).to have_received(:meter)
   end
 
   it 'does not raise when the configuration file is absent' do
@@ -109,7 +109,7 @@ describe 'opentelemetry report processor' do
   end
 
   it 'logs and does not raise when the SDK fails' do
-    allow(PuppetOtel::SDK).to receive(:meter).and_raise(StandardError, 'boom')
+    allow(PuppetX::OpentelemetryReporter::SDK).to receive(:meter).and_raise(StandardError, 'boom')
     allow(Puppet).to receive(:err)
     expect { report_for.process }.not_to raise_error
     expect(Puppet).to have_received(:err).with(%r{could not process report})
@@ -126,13 +126,13 @@ describe 'opentelemetry report processor' do
     it 'does not record traces unless they are switched on' do
       write_config("endpoint: http://localhost:4318\n")
       report_for.process
-      expect(PuppetOtel::SDK).not_to have_received(:tracer)
+      expect(PuppetX::OpentelemetryReporter::SDK).not_to have_received(:tracer)
     end
 
     it 'records traces when they are switched on' do
       write_config("traces:\n  enabled: true\n")
       report_for.process
-      expect(PuppetOtel::SDK).to have_received(:tracer)
+      expect(PuppetX::OpentelemetryReporter::SDK).to have_received(:tracer)
     end
 
     # Regression test: the metrics guard used to return early, which made
@@ -141,14 +141,14 @@ describe 'opentelemetry report processor' do
       write_config("metrics:\n  enabled: false\ntraces:\n  enabled: true\n")
       report_for.process
 
-      expect(PuppetOtel::SDK).to have_received(:tracer)
-      expect(PuppetOtel::SDK).not_to have_received(:meter)
+      expect(PuppetX::OpentelemetryReporter::SDK).to have_received(:tracer)
+      expect(PuppetX::OpentelemetryReporter::SDK).not_to have_received(:meter)
     end
 
     it 'does not flush when neither signal is enabled' do
       write_config("metrics:\n  enabled: false\n")
       report_for.process
-      expect(PuppetOtel::SDK).not_to have_received(:force_flush)
+      expect(PuppetX::OpentelemetryReporter::SDK).not_to have_received(:force_flush)
     end
   end
 end

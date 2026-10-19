@@ -6,10 +6,10 @@ require 'puppet'
 # Puppet module and when copied into a report directory alongside lib/.
 $LOAD_PATH.unshift(File.expand_path('../..', __dir__)) unless $LOAD_PATH.include?(File.expand_path('../..', __dir__))
 
-require 'puppet_otel/config'
-require 'puppet_otel/sdk'
-require 'puppet_otel/metrics'
-require 'puppet_otel/traces'
+require 'puppet_x/opentelemetry_reporter/config'
+require 'puppet_x/opentelemetry_reporter/sdk'
+require 'puppet_x/opentelemetry_reporter/metrics'
+require 'puppet_x/opentelemetry_reporter/traces'
 
 # Exports Puppet run telemetry over OTLP.
 #
@@ -29,7 +29,7 @@ Puppet::Reports.register_report(:opentelemetry) do
   DESC
 
   def process
-    config = PuppetOtel::Config.from_confdir(File.dirname(Puppet.settings[:config]))
+    config = PuppetX::OpentelemetryReporter::Config.from_confdir(File.dirname(Puppet.settings[:config]))
 
     return unless config.enabled?
     return unless config.report_environment?(environment)
@@ -42,7 +42,7 @@ Puppet::Reports.register_report(:opentelemetry) do
 
     # Exported immediately rather than waiting for the periodic reader, because
     # a JRuby instance may be evicted from the pool before the next tick.
-    PuppetOtel::SDK.force_flush if recorded
+    PuppetX::OpentelemetryReporter::SDK.force_flush if recorded
   rescue StandardError => e
     # A telemetry failure must never fail an agent run.
     Puppet.err("opentelemetry_reporter: could not process report: #{e.class}: #{e.message}")
@@ -51,19 +51,19 @@ Puppet::Reports.register_report(:opentelemetry) do
   # @return [Boolean] whether anything was recorded, which decides if a flush
   #   is worth doing.
   def record_metrics(config)
-    meter = PuppetOtel::SDK.meter(config)
+    meter = PuppetX::OpentelemetryReporter::SDK.meter(config)
     return false if meter.nil?
 
-    PuppetOtel::SDK.metrics(meter, node_attribute: config.node_attribute?).record(self)
+    PuppetX::OpentelemetryReporter::SDK.metrics(meter, node_attribute: config.node_attribute?).record(self)
     true
   end
 
   # @return [Boolean] whether anything was recorded.
   def record_traces(config)
-    tracer = PuppetOtel::SDK.tracer(config)
+    tracer = PuppetX::OpentelemetryReporter::SDK.tracer(config)
     return false if tracer.nil?
 
-    PuppetOtel::Traces.new(tracer, node_attribute: config.node_attribute?).record(self)
+    PuppetX::OpentelemetryReporter::Traces.new(tracer, node_attribute: config.node_attribute?).record(self)
     true
   end
 end

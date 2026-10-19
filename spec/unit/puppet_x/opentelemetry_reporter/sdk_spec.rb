@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'puppet_otel/sdk'
+require 'puppet_x/opentelemetry_reporter/sdk'
 
-describe PuppetOtel::SDK do
-  let(:config) { PuppetOtel::Config.new(path: nil, env: {}) }
+describe PuppetX::OpentelemetryReporter::SDK do
+  let(:config) { PuppetX::OpentelemetryReporter::Config.new(path: nil, env: {}) }
 
   before { described_class.reset! }
   after { described_class.reset! }
@@ -58,7 +58,7 @@ describe PuppetOtel::SDK do
 
     it 'merges configured resource attributes' do
       env = { 'OTEL_RESOURCE_ATTRIBUTES' => 'service.namespace=puppet' }
-      cfg = PuppetOtel::Config.new(path: nil, env: env)
+      cfg = PuppetX::OpentelemetryReporter::Config.new(path: nil, env: env)
       attrs = described_class.send(:resource, cfg).attribute_enumerator.to_h
       expect(attrs['service.namespace']).to eq('puppet')
     end
@@ -70,12 +70,12 @@ describe PuppetOtel::SDK do
     end
 
     it 'does not append the path twice' do
-      cfg = PuppetOtel::Config.new(path: nil, env: { 'OTEL_EXPORTER_OTLP_ENDPOINT' => 'http://c:4318/v1/metrics' })
+      cfg = PuppetX::OpentelemetryReporter::Config.new(path: nil, env: { 'OTEL_EXPORTER_OTLP_ENDPOINT' => 'http://c:4318/v1/metrics' })
       expect(described_class.send(:metrics_endpoint, cfg)).to eq('http://c:4318/v1/metrics')
     end
 
     it 'strips a trailing slash' do
-      cfg = PuppetOtel::Config.new(path: nil, env: { 'OTEL_EXPORTER_OTLP_ENDPOINT' => 'http://c:4318/' })
+      cfg = PuppetX::OpentelemetryReporter::Config.new(path: nil, env: { 'OTEL_EXPORTER_OTLP_ENDPOINT' => 'http://c:4318/' })
       expect(described_class.send(:metrics_endpoint, cfg)).to eq('http://c:4318/v1/metrics')
     end
   end

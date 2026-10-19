@@ -2,9 +2,9 @@
 
 require 'spec_helper'
 require 'tempfile'
-require 'puppet_otel/config'
+require 'puppet_x/opentelemetry_reporter/config'
 
-describe PuppetOtel::Config do
+describe PuppetX::OpentelemetryReporter::Config do
   # Helper: write YAML to a temp file and yield a Config built from it.
   def with_config_file(content, env: {})
     file = Tempfile.new(['otel', '.yaml'])
@@ -62,7 +62,7 @@ describe PuppetOtel::Config do
       with_config_file("service_name: [unclosed\n") do |config|
         config
       end
-    rescue PuppetOtel::Config::ConfigError => e
+    rescue PuppetX::OpentelemetryReporter::Config::ConfigError => e
       expect(e.message).to match(%r{invalid YAML})
     else
       raise 'expected ConfigError to be raised'
@@ -71,7 +71,7 @@ describe PuppetOtel::Config do
     it 'raises ConfigError when the document is not a mapping' do
       expect do
         with_config_file("- a\n- b\n") { |c| c }
-      end.to raise_error(PuppetOtel::Config::ConfigError, %r{expected a YAML mapping})
+      end.to raise_error(PuppetX::OpentelemetryReporter::Config::ConfigError, %r{expected a YAML mapping})
     end
   end
 

@@ -3,11 +3,11 @@
 require 'spec_helper'
 require 'opentelemetry/sdk'
 require 'opentelemetry-metrics-sdk'
-require 'puppet_otel/metrics'
+require 'puppet_x/opentelemetry_reporter/metrics'
 
 # FakeReport and FakeMetric are defined in spec/support/spec/fake_report.rb.
 
-describe PuppetOtel::Metrics do
+describe PuppetX::OpentelemetryReporter::Metrics do
   let(:exporter) { OpenTelemetry::SDK::Metrics::Export::InMemoryMetricPullExporter.new }
   let(:provider) { OpenTelemetry::SDK::Metrics::MeterProvider.new }
   let(:meter) { provider.meter('test') }

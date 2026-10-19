@@ -11,10 +11,10 @@ require 'fileutils'
 namespace :dist do
   # Concatenated in dependency order: sdk.rb uses Config.
   SOURCES = [
-    'lib/puppet_otel/config.rb',
-    'lib/puppet_otel/sdk.rb',
-    'lib/puppet_otel/metrics.rb',
-    'lib/puppet_otel/traces.rb',
+    'lib/puppet_x/opentelemetry_reporter/config.rb',
+    'lib/puppet_x/opentelemetry_reporter/sdk.rb',
+    'lib/puppet_x/opentelemetry_reporter/metrics.rb',
+    'lib/puppet_x/opentelemetry_reporter/traces.rb',
     'lib/puppet/reports/opentelemetry.rb',
   ].freeze
 
@@ -26,7 +26,7 @@ namespace :dist do
   # Only top level requires are considered. An indented require is deliberately
   # lazy, loaded inside a method and guarded by a LoadError rescue so telemetry
   # degrades instead of failing the run, and hoisting it would defeat that.
-  INTERNAL_REQUIRE = %r{^require\s+['"]puppet_otel/[^'"]+['"]\s*$}
+  INTERNAL_REQUIRE = %r{^require\s+['"]puppet_x/opentelemetry_reporter/[^'"]+['"]\s*$}
   EXTERNAL_REQUIRE = /^require\s+['"]([^'"]+)['"]\s*$/
   LOAD_PATH_LINE = /^\s*\$LOAD_PATH\./
   FROZEN_LITERAL = /^#\s*frozen_string_literal:/

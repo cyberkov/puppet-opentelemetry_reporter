@@ -11,11 +11,16 @@ describe 'dist/opentelemetry.rb' do
   let(:dist) { File.join(root, 'dist', 'opentelemetry.rb') }
 
   # Building once is far cheaper than per example, so the hook is kept.
+  # Any previous build is removed first, so that a failing build cannot pass
+  # by leaving a stale file behind.
   # rubocop:disable RSpec/BeforeAfterAll
   before(:all) do
-    Dir.chdir(File.expand_path('../..', __dir__)) do
-      system('bundle exec rake dist:build', out: File::NULL, err: File::NULL)
+    root = File.expand_path('../..', __dir__)
+    FileUtils.rm_rf(File.join(root, 'dist'))
+    built = Dir.chdir(root) do
+      system('bundle exec rake dist:clean dist:build', out: File::NULL, err: File::NULL)
     end
+    raise 'rake dist:build failed' unless built
   end
   # rubocop:enable RSpec/BeforeAfterAll
 
@@ -29,7 +34,7 @@ describe 'dist/opentelemetry.rb' do
   end
 
   it 'contains no requires of the module own files' do
-    expect(File.read(dist)).not_to match(%r{require\s+['"]puppet_otel/})
+    expect(File.read(dist)).not_to match(%r{require\s+['"]puppet_x/opentelemetry_reporter/})
   end
 
   it 'does not hoist the lazily loaded OpenTelemetry requires' do

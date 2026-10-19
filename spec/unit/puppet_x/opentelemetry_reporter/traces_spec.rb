@@ -2,12 +2,12 @@
 
 require 'spec_helper'
 require 'opentelemetry/sdk'
-require 'puppet_otel/traces'
+require 'puppet_x/opentelemetry_reporter/traces'
 
 # FakeReport, FakeMetric and FakeResourceStatus are defined in
 # spec/support/spec/fake_report.rb.
 
-describe PuppetOtel::Traces do
+describe PuppetX::OpentelemetryReporter::Traces do
   let(:exporter) { OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new }
   let(:provider) { OpenTelemetry::SDK::Trace::TracerProvider.new }
   let(:tracer) { provider.tracer('test') }
