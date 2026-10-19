@@ -31,35 +31,43 @@ module PuppetOtel
         nil
       end
 
+      # @return [Object, nil] the tracer, or nil when telemetry is unavailable.
+      def tracer(config)
+        provider = tracer_provider(config)
+        return nil if provider.nil?
+
+        @tracer ||= provider.tracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION)
+      rescue StandardError => e
+        log_error('could not create tracer', e)
+        nil
+      end
+
       # Exports anything buffered. Called after each report so that telemetry
       # is not lost when a JRuby instance is evicted from the pool before the
       # periodic reader next fires.
       def force_flush
-        provider = @meter_provider
-        return if provider.nil?
-
-        provider.force_flush
-      rescue StandardError => e
-        log_error('could not flush metrics', e)
+        flush_provider(@meter_provider, 'metrics')
+        flush_provider(@tracer_provider, 'traces')
       end
 
       def shutdown
-        provider = @meter_provider
-        return if provider.nil?
-
-        provider.shutdown
-      rescue StandardError => e
-        log_error('could not shut down meter provider', e)
+        shutdown_provider(@meter_provider, 'meter provider')
+        shutdown_provider(@tracer_provider, 'tracer provider')
       ensure
         reset!
       end
 
-      # Discards the configured provider. Intended for tests.
+      # Discards the configured providers. Intended for tests.
       def reset!
         MUTEX.synchronize do
           @meter_provider = nil
           @meter = nil
           @configured = false
+          @tracer_provider = nil
+          @tracer = nil
+          # Tracked separately from @configured: the two signals are enabled
+          # independently, so one must never suppress the other's setup.
+          @traces_configured = false
         end
       end
 
@@ -83,6 +91,61 @@ module PuppetOtel
         end
 
         @meter_provider
+      end
+
+      # Tracked by its own flag rather than @configured, because metrics and
+      # traces are enabled independently and either may be set up first.
+      def tracer_provider(config)
+        return @tracer_provider if @traces_configured
+
+        MUTEX.synchronize do
+          next if @traces_configured
+
+          @tracer_provider = build_tracer_provider(config)
+          @traces_configured = true
+          install_at_exit_hook if @tracer_provider
+        end
+
+        @tracer_provider
+      end
+
+      def build_tracer_provider(config)
+        require 'opentelemetry/sdk'
+        require 'opentelemetry/exporter/otlp'
+
+        exporter = OpenTelemetry::Exporter::OTLP::Exporter.new(
+          endpoint: traces_endpoint(config),
+          headers: config.headers,
+          timeout: config.timeout,
+        )
+
+        provider = OpenTelemetry::SDK::Trace::TracerProvider.new(resource: resource(config))
+        provider.add_span_processor(
+          OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor.new(exporter),
+        )
+        provider
+      rescue LoadError => e
+        log_error('OpenTelemetry trace gems are not available, traces are disabled', e)
+        nil
+      rescue StandardError => e
+        log_error('could not configure OpenTelemetry traces', e)
+        nil
+      end
+
+      def flush_provider(provider, signal)
+        return if provider.nil?
+
+        provider.force_flush
+      rescue StandardError => e
+        log_error("could not flush #{signal}", e)
+      end
+
+      def shutdown_provider(provider, description)
+        return if provider.nil?
+
+        provider.shutdown
+      rescue StandardError => e
+        log_error("could not shut down #{description}", e)
       end
 
       def build_meter_provider(config)
@@ -123,6 +186,15 @@ module PuppetOtel
         "#{endpoint}/v1/metrics"
       end
 
+      # The OTLP trace exporter expects the signal specific path, mirroring
+      # metrics_endpoint above.
+      def traces_endpoint(config)
+        endpoint = config.endpoint.to_s.sub(%r{/+\z}, '')
+        return endpoint if endpoint.end_with?('/v1/traces')
+
+        "#{endpoint}/v1/traces"
+      end
+
       # Describes the OpenVox Server process emitting the telemetry. The node a
       # report is about is not part of the resource, because one process
       # reports on behalf of many nodes.
@@ -144,7 +216,12 @@ module PuppetOtel
         nil
       end
 
+      # Guarded because both providers call this, and shutdown must only be
+      # registered once per process.
       def install_at_exit_hook
+        return if @at_exit_installed
+
+        @at_exit_installed = true
         at_exit { shutdown }
       end
 

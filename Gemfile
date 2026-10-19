@@ -29,6 +29,7 @@ gem 'openvox', ENV.fetch('OPENVOX_GEM_VERSION', ['>= 7', '< 10']), require: fals
 # beyond a major-zero floor so Bundler resolves them on their own release
 # cadence. Review Gemfile.lock and each changelog when these move.
 gem 'opentelemetry-sdk', '~> 1.0', require: false
+gem 'opentelemetry-exporter-otlp', '~> 0.30', require: false
 gem 'opentelemetry-metrics-api', require: false
 gem 'opentelemetry-metrics-sdk', require: false
 gem 'opentelemetry-exporter-otlp-metrics', require: false

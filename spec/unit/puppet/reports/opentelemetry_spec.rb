@@ -20,11 +20,23 @@ describe 'opentelemetry report processor' do
     provider.meter('test')
   end
 
+  # A real tracer, but backed by an in-memory exporter, for the same reason as
+  # the meter above.
+  let(:in_memory_tracer) do
+    provider = OpenTelemetry::SDK::Trace::TracerProvider.new
+    provider.add_span_processor(
+      OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(
+        OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new,
+      ),
+    )
+    provider.tracer('test')
+  end
+
   before do
     require 'puppet/reports/opentelemetry'
     PuppetOtel::SDK.reset!
     allow(Puppet.settings).to receive(:[]).with(:config).and_return(File.join(confdir, 'puppet.conf'))
-    allow(PuppetOtel::SDK).to receive(:meter).and_return(in_memory_meter)
+    allow(PuppetOtel::SDK).to receive_messages(meter: in_memory_meter, tracer: in_memory_tracer)
     allow(PuppetOtel::SDK).to receive(:force_flush)
   end
 
@@ -96,5 +108,35 @@ describe 'opentelemetry report processor' do
     write_config("broken: [unclosed\n")
     expect(Puppet).to receive(:err).with(%r{could not process report})
     expect { report_for.process }.not_to raise_error
+  end
+
+  describe 'traces' do
+    it 'does not record traces unless they are switched on' do
+      write_config("endpoint: http://localhost:4318\n")
+      report_for.process
+      expect(PuppetOtel::SDK).not_to have_received(:tracer)
+    end
+
+    it 'records traces when they are switched on' do
+      write_config("traces:\n  enabled: true\n")
+      report_for.process
+      expect(PuppetOtel::SDK).to have_received(:tracer)
+    end
+
+    # Regression test: the metrics guard used to return early, which made
+    # traces unreachable whenever metrics were switched off.
+    it 'records traces even when metrics are disabled' do
+      write_config("metrics:\n  enabled: false\ntraces:\n  enabled: true\n")
+      report_for.process
+
+      expect(PuppetOtel::SDK).to have_received(:tracer)
+      expect(PuppetOtel::SDK).not_to have_received(:meter)
+    end
+
+    it 'does not flush when neither signal is enabled' do
+      write_config("metrics:\n  enabled: false\n")
+      report_for.process
+      expect(PuppetOtel::SDK).not_to have_received(:force_flush)
+    end
   end
 end

@@ -14,6 +14,7 @@ namespace :dist do
     'lib/puppet_otel/config.rb',
     'lib/puppet_otel/sdk.rb',
     'lib/puppet_otel/metrics.rb',
+    'lib/puppet_otel/traces.rb',
     'lib/puppet/reports/opentelemetry.rb',
   ].freeze
 
@@ -71,7 +72,8 @@ namespace :dist do
       #   /etc/puppetlabs/puppet/lib/puppet/reports/opentelemetry.rb
       #
       # Requires the opentelemetry-sdk, opentelemetry-metrics-sdk and
-      # opentelemetry-exporter-otlp-metrics gems. See the README.
+      # opentelemetry-exporter-otlp-metrics gems, plus
+      # opentelemetry-exporter-otlp when traces are enabled. See the README.
     HEADER
 
     FileUtils.mkdir_p(File.dirname(OUTPUT))
