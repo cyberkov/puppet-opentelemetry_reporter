@@ -10,9 +10,23 @@ services:
     command: ['--config=/etc/otelcol-contrib/config.yaml']
     volumes:
       - ./collector.yaml:/etc/otelcol-contrib/config.yaml:z
+      # Span output, bind mounted so the assertions can read it from the host.
+      # The container cannot be read from: the image is distroless, so there is
+      # no shell or cat to exec. run.sh creates this directory world writable
+      # before starting the stack, because the collector runs as a non root
+      # user and the exporter aborts startup if it cannot open the file.
+      - ./spans:/data:z
     ports:
       # Exposed so the assertions can scrape from the host.
       - '8889:8889'
+    # The collector is the only service that can confirm it is actually
+    # listening, and both other services are useless without it.
+    healthcheck:
+      test: ['CMD', '/otelcol-contrib', 'components']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
     networks:
       - puppet
 
@@ -41,7 +55,17 @@ services:
       - ./otel.yaml:/etc/puppetlabs/puppet/otel.yaml:z
       - ./site.pp:/etc/puppetlabs/code/environments/production/manifests/site.pp:z
     depends_on:
-      - collector
+      collector:
+        condition: service_healthy
+    # The server takes minutes to boot, and the agent is only useful once it
+    # answers. Gating on this is what stops the agent sitting in Created.
+    healthcheck:
+      test:
+        ['CMD', 'curl', '-ksf', 'https://localhost:8140/status/v1/simple']
+      interval: 10s
+      timeout: 10s
+      retries: 60
+      start_period: 30s
     networks:
       - puppet
 
@@ -55,7 +79,8 @@ services:
     entrypoint: ['sleep']
     command: ['infinity']
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     networks:
       - puppet
 

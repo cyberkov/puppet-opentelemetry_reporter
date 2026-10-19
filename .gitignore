@@ -19,3 +19,5 @@ Puppetfile.lock
 .*.sw?
 .yardoc/
 Guardfile
+# Span output written by the end to end test's collector file exporter.
+test/e2e/spans/

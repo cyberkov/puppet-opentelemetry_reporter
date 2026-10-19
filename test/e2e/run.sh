@@ -51,6 +51,18 @@ fail() {
 info 'building dist/opentelemetry.rb'
 (cd ../.. && bundle exec rake dist:build)
 
+# The file exporter writes spans here and the assertions read them back from
+# the host. It must exist before the collector starts: the exporter does not
+# create missing parents and aborts startup if it cannot open the file, which
+# takes the whole stack down with it. World writable because the collector
+# runs as a non root user that does not match the host uid.
+info 'preparing the span output directory'
+mkdir -p spans
+chmod 777 spans
+# Removed rather than left in place, so spans from an earlier run cannot
+# satisfy the assertions and hide a broken export.
+rm -f spans/spans.json
+
 info 'starting stack'
 $COMPOSE down -v >/dev/null 2>&1 || true
 $COMPOSE up -d
@@ -171,7 +183,9 @@ deadline=$((SECONDS + 60))
 spans=''
 until [[ -n "$spans" ]]; do
   ((SECONDS >= deadline)) && fail 'no spans appeared on the collector within 60 seconds'
-  spans=$(podman exec "$COLLECTOR" cat /tmp/spans.json 2>/dev/null || true)
+  # Read from the host bind mount, not from inside the container: the
+  # collector image is distroless, so "podman exec ... cat" can never work.
+  spans=$(cat spans/spans.json 2>/dev/null || true)
   [[ -z "$spans" ]] && sleep 5
 done
 

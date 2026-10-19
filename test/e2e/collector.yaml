@@ -22,8 +22,15 @@ exporters:
 
   # Spans are written as JSON lines the test can grep, because there is no
   # scrape endpoint for traces the way there is for metrics.
+  #
+  # The directory is bind mounted from test/e2e/spans, so the assertions read
+  # the file directly from the host. It cannot be read from inside the
+  # container: the image is distroless and has no shell or coreutils, so
+  # "podman exec ... cat" always fails. The directory must also exist up
+  # front, because this exporter does not create missing parents and aborts
+  # collector startup instead of degrading.
   file:
-    path: /tmp/spans.json
+    path: /data/spans.json
 
   prometheus:
     endpoint: 0.0.0.0:8889
