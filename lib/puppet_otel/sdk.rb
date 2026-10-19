@@ -2,6 +2,7 @@
 
 require 'socket'
 require 'puppet_otel/config'
+require 'puppet_otel/metrics'
 
 module PuppetOtel
   # Lazily builds and owns the OpenTelemetry MeterProvider for this process.
@@ -29,6 +30,27 @@ module PuppetOtel
       rescue StandardError => e
         log_error('could not create meter', e)
         nil
+      end
+
+      # Returns the PuppetOtel::Metrics recorder for a meter, building it once.
+      #
+      # Instruments are registered on the meter, which lives as long as the
+      # provider. The recorder owns the instrument cache, so it must live as
+      # long as the meter too. A recorder per report would register every
+      # instrument again each time and make the SDK log "duplicate instrument
+      # registration". The cache is bounded by the fixed set of metric names,
+      # never by the number of reporting nodes.
+      #
+      # @return [PuppetOtel::Metrics]
+      def metrics(meter, node_attribute: true)
+        MUTEX.synchronize do
+          unless @metrics_meter.equal?(meter)
+            @metrics = {}
+            @metrics_meter = meter
+          end
+
+          @metrics[node_attribute] ||= PuppetOtel::Metrics.new(meter, node_attribute: node_attribute)
+        end
       end
 
       # @return [Object, nil] the tracer, or nil when telemetry is unavailable.
@@ -62,6 +84,8 @@ module PuppetOtel
         MUTEX.synchronize do
           @meter_provider = nil
           @meter = nil
+          @metrics = nil
+          @metrics_meter = nil
           @configured = false
           @tracer_provider = nil
           @tracer = nil

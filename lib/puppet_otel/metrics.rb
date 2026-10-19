@@ -31,6 +31,7 @@ module PuppetOtel
       @meter = meter
       @node_attribute = node_attribute
       @instruments = {}
+      @instruments_mutex = Mutex.new
     end
 
     # Records every metric derived from one report.
@@ -153,15 +154,21 @@ module PuppetOtel
       (entry && entry[2].is_a?(Numeric)) ? entry[2] : nil
     end
 
-    # Instruments are created once per meter and reused, because creating a
-    # duplicate instrument of the same name is an error in the SDK.
+    # Instruments are created once per meter and reused, because registering a
+    # duplicate instrument of the same name makes the SDK log a warning.
+    #
+    # This object is shared by every report processed against the meter (see
+    # PuppetOtel::SDK.metrics), so the cache is guarded for concurrent threads.
+    # It is keyed by metric name only, so it never grows with the node count.
     def gauge_for(definition)
       name = definition[:name]
-      @instruments[name] ||= @meter.create_gauge(
-        name,
-        unit: definition[:unit],
-        description: definition[:description],
-      )
+      @instruments_mutex.synchronize do
+        @instruments[name] ||= @meter.create_gauge(
+          name,
+          unit: definition[:unit],
+          description: definition[:description],
+        )
+      end
     end
 
     # Reads an attribute defensively. Report objects differ between Puppet

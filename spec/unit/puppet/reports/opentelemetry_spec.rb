@@ -70,6 +70,15 @@ describe 'opentelemetry report processor' do
     expect(PuppetOtel::SDK).to have_received(:force_flush)
   end
 
+  it 'does not register instruments again for later reports' do
+    write_config("endpoint: http://localhost:4318\n")
+    allow(in_memory_meter).to receive(:create_gauge).and_call_original
+
+    2.times { report_for.process }
+
+    expect(in_memory_meter).to have_received(:create_gauge).exactly(9).times
+  end
+
   it 'does nothing when disabled' do
     write_config("enabled: false\n")
     report_for.process

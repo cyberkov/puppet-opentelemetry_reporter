@@ -26,6 +26,27 @@ describe PuppetOtel::SDK do
     end
   end
 
+  describe '.metrics' do
+    let(:meter) { described_class.meter(config) }
+
+    it 'returns the same recorder for the same meter' do
+      first = described_class.metrics(meter)
+      second = described_class.metrics(meter)
+      expect(second).to be(first)
+    end
+
+    it 'returns a different recorder when node_attribute differs' do
+      expect(described_class.metrics(meter, node_attribute: false))
+        .not_to be(described_class.metrics(meter, node_attribute: true))
+    end
+
+    it 'returns a new recorder after reset!' do
+      first = described_class.metrics(meter)
+      described_class.reset!
+      expect(described_class.metrics(described_class.meter(config))).not_to be(first)
+    end
+  end
+
   describe 'resource' do
     it 'describes the server, not the reported node' do
       described_class.meter(config)

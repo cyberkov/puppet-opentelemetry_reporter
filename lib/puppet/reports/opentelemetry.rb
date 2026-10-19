@@ -54,7 +54,7 @@ Puppet::Reports.register_report(:opentelemetry) do
     meter = PuppetOtel::SDK.meter(config)
     return false if meter.nil?
 
-    PuppetOtel::Metrics.new(meter, node_attribute: config.node_attribute?).record(self)
+    PuppetOtel::SDK.metrics(meter, node_attribute: config.node_attribute?).record(self)
     true
   end
 

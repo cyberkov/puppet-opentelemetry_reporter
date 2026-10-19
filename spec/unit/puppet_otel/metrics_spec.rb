@@ -115,6 +115,17 @@ describe PuppetOtel::Metrics do
     end
   end
 
+  describe 'instrument reuse' do
+    it 'creates each instrument once when one recorder handles several reports' do
+      allow(meter).to receive(:create_gauge).and_call_original
+      recorder = described_class.new(meter)
+
+      2.times { recorder.record(FakeReport.new) }
+
+      expect(meter).to have_received(:create_gauge).exactly(9).times
+    end
+  end
+
   describe 'robustness' do
     it 'does not raise when the report has no metrics' do
       expect { described_class.new(meter).record(FakeReport.new(metrics: {})) }.not_to raise_error
