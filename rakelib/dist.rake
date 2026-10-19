@@ -27,9 +27,9 @@ namespace :dist do
   # lazy, loaded inside a method and guarded by a LoadError rescue so telemetry
   # degrades instead of failing the run, and hoisting it would defeat that.
   INTERNAL_REQUIRE = %r{^require\s+['"]puppet_x/opentelemetry_reporter/[^'"]+['"]\s*$}
-  EXTERNAL_REQUIRE = /^require\s+['"]([^'"]+)['"]\s*$/
-  LOAD_PATH_LINE = /^\s*\$LOAD_PATH\./
-  FROZEN_LITERAL = /^#\s*frozen_string_literal:/
+  EXTERNAL_REQUIRE = %r{^require\s+['"]([^'"]+)['"]\s*$}
+  LOAD_PATH_LINE = %r{^\s*\$LOAD_PATH\.}
+  FROZEN_LITERAL = %r{^#\s*frozen_string_literal:}
 
   def strip_source(path)
     requires = []

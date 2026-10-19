@@ -6,8 +6,8 @@
 
 node default {
   file { '/tmp/otel_e2e':
-    ensure  => directory,
-    mode    => '0755',
+    ensure => directory,
+    mode   => '0755',
   }
 
   file { '/tmp/otel_e2e/marker.txt':
