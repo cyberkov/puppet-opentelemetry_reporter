@@ -1,7 +1,7 @@
 # puppet-opentelemetry_reporter
 
-A Puppet/OpenVox report processor that exports Puppet run metrics to an
-OpenTelemetry collector over OTLP.
+A Puppet/OpenVox report processor that exports Puppet run metrics, and
+optionally traces, to an OpenTelemetry collector over OTLP.
 
 Metric names use the OpenTelemetry dot separator. The Collector's Prometheus
 exporter rewrites dots to underscores, so `puppet.report.resources` is
@@ -24,6 +24,13 @@ installed with `puppetserver gem`, not the system `gem`:
 puppetserver gem install opentelemetry-sdk \
                          opentelemetry-metrics-sdk \
                          opentelemetry-exporter-otlp-metrics
+```
+
+Traces additionally require the OTLP span exporter. Install it only if you
+intend to enable `traces.enabled`:
+
+```bash
+puppetserver gem install opentelemetry-exporter-otlp
 ```
 
 If the gems are missing the processor logs a warning and disables itself.
@@ -101,7 +108,7 @@ that is a misconfiguration rather than an absence of one.
 | `environments` | — | all | Allowlist of Puppet environments. |
 | `metrics.enabled` | — | `true` | |
 | `metrics.node_attribute` | — | `true` | Set `false` to drop `puppet.node.name` and bound cardinality. |
-| `traces.enabled` | — | `false` | Reserved; not yet implemented. |
+| `traces.enabled` | — | `false` | Opt-in; one span per resource. See [Traces](#traces). |
 
 ### Cardinality
 
@@ -143,6 +150,53 @@ status without the value itself being an opaque enumeration:
 ```promql
 puppet_run_status{puppet_run_status="failed"} == 1
 ```
+
+## Traces
+
+Traces are **opt-in**. Enable them in `otel.yaml`:
+
+```yaml
+traces:
+  enabled: true
+```
+
+They are off by default because one span is emitted per resource: a catalog
+with thousands of resources produces thousands of spans per run, for every
+node. Enable them deliberately, and preferably with sampling configured in
+the collector.
+
+Each run becomes one trace:
+
+- a root `puppet.run` span covering the run
+- one child span per evaluated resource, named after the resource
+  (`File[/tmp/example]`)
+
+Because a report only arrives *after* the run has finished, spans are back
+dated to the times the agent recorded rather than the time of export. The
+root span's duration comes from the report's own `time` metric, so it agrees
+with `puppet.report.duration`. A failed run, and each failed resource, is
+marked with span status `ERROR`.
+
+| Attribute | On | Description |
+| --- | --- | --- |
+| `puppet.node.name` | root | Reported node (unless disabled). |
+| `deployment.environment.name` | root | Puppet environment. |
+| `puppet.run.status` | root | `failed`, `changed` or `unchanged`. |
+| `puppet.cached_catalog_status` | root | Whether a cached catalog was used. |
+| `puppet.transaction.uuid` | root | Correlates with the report. |
+| `puppet.resource.type` | resource | e.g. `File`, `Package`. |
+| `puppet.resource.title` | resource | e.g. `/tmp/example`. |
+| `puppet.resource.changed` | resource | Whether the resource changed. |
+| `puppet.resource.out_of_sync` | resource | Whether it was out of sync. |
+| `puppet.resource.failed` | resource | Whether it failed. |
+| `code.file.path` | resource | Manifest that declared the resource. |
+| `code.line.number` | resource | Line within that manifest. |
+
+Skipped resources produce no span, because they were never evaluated and so
+have no duration to show.
+
+Traces need the `opentelemetry-exporter-otlp` gem and a `traces` pipeline in
+the collector; `/v1/traces` is appended to `endpoint` automatically.
 
 ## Trying it locally
 

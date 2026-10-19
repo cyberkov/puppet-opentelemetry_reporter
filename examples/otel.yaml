@@ -69,6 +69,10 @@ metrics:
 
 traces:
   # Opt-in. A catalog with thousands of resources produces a span per resource,
-  # so enabling this is a deliberate choice. Not yet implemented.
+  # so enabling this is a deliberate choice.
+  #
+  # Requires the opentelemetry-exporter-otlp gem in addition to the metrics
+  # gems. The signal specific path (/v1/traces) is appended to the endpoint
+  # above automatically.
   # Default: false
   enabled: false

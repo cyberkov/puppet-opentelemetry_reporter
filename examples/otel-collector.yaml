@@ -6,7 +6,8 @@
 #     -v ./examples/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:z \
 #     docker.io/otel/opentelemetry-collector-contrib:latest
 #
-# Metrics are then scrapeable at http://localhost:8889/metrics
+# Metrics are then scrapeable at http://localhost:8889/metrics, and spans are
+# echoed to the collector log when traces.enabled is set.
 
 receivers:
   otlp:
@@ -20,8 +21,8 @@ processors:
     timeout: 10s
 
 exporters:
-  # Writes the received metrics to the collector log. Useful when first
-  # verifying that reports are arriving.
+  # Writes the received metrics and spans to the collector log. Useful when
+  # first verifying that reports are arriving.
   debug:
     verbosity: detailed
 
@@ -44,3 +45,10 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [debug, prometheus]
+
+    # Only used when traces.enabled is set in otel.yaml. Without this pipeline
+    # spans arrive on the same port and are dropped.
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

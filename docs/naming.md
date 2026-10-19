@@ -50,6 +50,62 @@ correct released key for a host name and there is no stable alternative, so it i
 | `puppet.node.name` | custom | `report.host` |
 | `puppet.run.status` | custom | `report.status` |
 
+## Span attributes (traces)
+
+Traces model one Puppet run as a trace: a root `puppet.run` span, with one child span
+per evaluated resource. The root span carries the same data point attributes as the
+metrics, so a query filters spans and metrics identically.
+
+### Root span
+
+| Attribute | Stability | Source |
+|---|---|---|
+| `deployment.environment.name` | stable | `report.environment` |
+| `puppet.node.name` | custom | `report.host` |
+| `puppet.run.status` | custom | `report.status` |
+| `puppet.cached_catalog_status` | custom | `report.cached_catalog_status` |
+| `puppet.transaction.uuid` | custom | `report.transaction_uuid` |
+
+### Resource spans
+
+| Attribute | Stability | Source |
+|---|---|---|
+| `puppet.resource.type` | custom | `status.resource_type` |
+| `puppet.resource.title` | custom | `status.title` |
+| `puppet.resource.changed` | custom | `status.changed` |
+| `puppet.resource.out_of_sync` | custom | `status.out_of_sync` |
+| `puppet.resource.failed` | custom | `status.failed` |
+| `code.file.path` | development | `status.file` |
+| `code.line.number` | development | `status.line` |
+
+The `code.*` group is reused rather than inventing `puppet.resource.file`: a manifest
+path and line *are* source code coordinates, which is exactly what the released group
+describes. Both keys are at `development` stability in v1.44.0, but there is no stable
+alternative and the semantics match, so they are used as-is.
+
+The span **name** is the resource reference (`File[/tmp/example]`) rather than a generic
+constant, because conventions require the name to identify what the span represents while
+staying bounded. A resource reference is already the catalog's own bounded identifier.
+
+### Timestamps
+
+A report arrives only after the run has finished, so spans are back dated to the times the
+agent recorded rather than the time of export. The root span's duration is taken from the
+report's `time` metric rather than a wall clock, so it agrees with `puppet.report.duration`
+instead of including export latency.
+
+A resource without its own timestamp is placed at the run's start time, which keeps it
+inside its parent rather than inventing a position for it.
+
+### Status
+
+A failed run, and each failed resource, sets span status `ERROR`. A successful span is
+left `UNSET` rather than explicitly `OK`, per the conventions: `OK` is reserved for an
+explicit assertion by the application, not the default for "nothing went wrong".
+
+Skipped resources produce no span at all, because they were never evaluated and so have no
+duration to represent.
+
 ## Cardinality
 
 Attaching the node name to every data point means the number of series scales with the
@@ -92,6 +148,12 @@ report's own machine-readable metric ids).
 | `puppet.metric.name` | report metric id, e.g. `total`, `skipped`, `failed`, `config_retrieval` |
 | `puppet.cached_catalog_status` | `not_used`, `explicitly_requested`, `on_failure` |
 | `puppet.noop` | `true` / `false` |
+| `puppet.transaction.uuid` | the report's transaction uuid (spans only) |
+| `puppet.resource.type` | resource type, e.g. `File`, `Package` (spans only) |
+| `puppet.resource.title` | resource title (spans only) |
+| `puppet.resource.changed` | `true` / `false` (spans only) |
+| `puppet.resource.out_of_sync` | `true` / `false` (spans only) |
+| `puppet.resource.failed` | `true` / `false` (spans only) |
 
 ## Units
 
