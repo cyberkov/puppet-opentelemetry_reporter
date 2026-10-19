@@ -47,8 +47,11 @@ puppet module install voxpupuli-opentelemetry_reporter \
 ```
 
 It depends on `puppetlabs-stdlib`. The module directory must be named
-`opentelemetry_reporter`. Puppet Server syncs the report processor and its
-`PuppetX::OpentelemetryReporter` library from it by pluginsync.
+`opentelemetry_reporter`. The report processor runs on the server, which
+loads it and its `PuppetX::OpentelemetryReporter` library from the module
+in the environment's modulepath. Pluginsync also copies the module's `lib/`
+to every agent's cache directory. That is harmless, because agents never
+run report processors.
 
 ### 3. Configure the collector endpoint
 
