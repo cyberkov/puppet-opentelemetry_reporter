@@ -2,5 +2,3 @@
 fixtures:
   forge_modules:
     stdlib: puppetlabs/stdlib
-  symlinks:
-    opentelemetry_reporter: "#{source_dir}"
