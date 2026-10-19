@@ -21,4 +21,5 @@ metrics:
   node_attribute: true
 
 traces:
-  enabled: false
+  # Switched on so the end to end test actually exercises the span path.
+  enabled: true

@@ -74,13 +74,13 @@ if podman exec "$SERVER" test -d /opt/puppetlabs/server/data/puppetserver/jruby-
     gems_installed=false
   else
     podman exec "$SERVER" puppetserver gem install --no-document \
-      opentelemetry-sdk opentelemetry-metrics-sdk opentelemetry-exporter-otlp-metrics \
+      opentelemetry-sdk opentelemetry-metrics-sdk opentelemetry-exporter-otlp-metrics opentelemetry-exporter-otlp \
       || fail 'could not install the OpenTelemetry gems into the server JRuby'
     gems_installed=true
   fi
 else
   podman exec "$SERVER" puppetserver gem install --no-document \
-    opentelemetry-sdk opentelemetry-metrics-sdk opentelemetry-exporter-otlp-metrics \
+    opentelemetry-sdk opentelemetry-metrics-sdk opentelemetry-exporter-otlp-metrics opentelemetry-exporter-otlp \
     || fail 'could not install the OpenTelemetry gems into the server JRuby'
   gems_installed=true
 fi
@@ -162,6 +162,47 @@ else
 fi
 
 [[ $failed -eq 0 ]] || fail 'one or more expected metrics were missing'
+
+# Traces are enabled in otel.yaml, so spans must have reached the collector.
+# Asserted separately from metrics: the two signals use different providers and
+# exporters, so one working proves nothing about the other.
+info 'waiting for spans to reach the collector'
+deadline=$((SECONDS + 60))
+spans=''
+until [[ -n "$spans" ]]; do
+  ((SECONDS >= deadline)) && fail 'no spans appeared on the collector within 60 seconds'
+  spans=$(podman exec "$COLLECTOR" cat /tmp/spans.json 2>/dev/null || true)
+  [[ -z "$spans" ]] && sleep 5
+done
+
+info 'asserting on the exported spans'
+span_failed=0
+
+# The root span proves the run itself was traced.
+if echo "$spans" | grep -q '"puppet.run"'; then
+  green '  ok   puppet.run root span present'
+else
+  red '  MISS puppet.run root span'
+  span_failed=1
+fi
+
+# A resource span proves the per resource child spans were emitted.
+if echo "$spans" | grep -q 'puppet.resource.type'; then
+  green '  ok   resource spans present'
+else
+  red '  MISS resource spans'
+  span_failed=1
+fi
+
+# Proves the resource attributes reached the span, as they do for metrics.
+if echo "$spans" | grep -q 'puppet.node.name'; then
+  green '  ok   puppet.node.name attribute present on spans'
+else
+  red '  MISS puppet.node.name attribute on spans'
+  span_failed=1
+fi
+
+[[ $span_failed -eq 0 ]] || fail 'one or more expected spans were missing'
 
 echo
 green 'END TO END TEST PASSED'

@@ -1,7 +1,8 @@
 # Collector configuration for the end to end test.
 #
 # Metrics are exposed for scraping on :8889 and echoed to the container log,
-# so a failing test can be diagnosed from either side.
+# so a failing test can be diagnosed from either side. Spans have no scrape
+# endpoint, so they are written to a file the test reads instead.
 
 receivers:
   otlp:
@@ -18,6 +19,11 @@ processors:
 exporters:
   debug:
     verbosity: detailed
+
+  # Spans are written as JSON lines the test can grep, because there is no
+  # scrape endpoint for traces the way there is for metrics.
+  file:
+    path: /tmp/spans.json
 
   prometheus:
     endpoint: 0.0.0.0:8889
@@ -36,3 +42,7 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [debug, prometheus]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug, file]
