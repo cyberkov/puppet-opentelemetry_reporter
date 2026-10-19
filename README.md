@@ -36,29 +36,58 @@ puppetserver gem install opentelemetry-exporter-otlp
 If the gems are missing the processor logs a warning and disables itself.
 It will not fail an agent run.
 
-### 2. Install the processor
+### 2. Install the module
 
-Either deploy this repository as a Puppet module, or build the single
-drop-in file:
+Install the module on the server, for example into the `production`
+environment or the global module path:
+
+```bash
+puppet module install voxpupuli-opentelemetry_reporter \
+  --modulepath /etc/puppetlabs/code/modules
+```
+
+It depends on `puppetlabs-stdlib`. The module directory must be named
+`opentelemetry_reporter`. Puppet Server syncs the report processor and its
+`PuppetX::OpentelemetryReporter` library from it by pluginsync.
+
+### 3. Configure the collector endpoint
+
+Declare the class on the server. It manages only
+`/etc/puppetlabs/puppet/otel.yaml`:
+
+```puppet
+class { 'opentelemetry_reporter':
+  endpoint       => 'http://collector.example.com:4318',
+  service_name   => 'openvox-server',
+  traces_enabled => true,
+}
+```
+
+Every parameter except `enabled` is optional. A parameter left unset is
+omitted from the file, so the matching `OTEL_*` environment variable still
+applies. This matters for `headers`, which replaces
+`OTEL_EXPORTER_OTLP_HEADERS` when present. The file defaults to owner `root`,
+group `puppet` and mode `0640`, because it can hold a token.
+
+The class does **not** edit `puppet.conf` or restart the server (see step 4).
+With `manage_gems => true` it also installs the gems from step 1 using the
+`puppetserver_gem` package provider, which your Puppet version has to supply.
+It is off by default, so the manual `puppetserver gem install` above stays
+valid.
+
+#### Alternative: single drop-in file
+
+Without the module, build the self-contained processor and copy it over:
 
 ```bash
 bundle exec rake dist:build
-```
-
-and copy the result onto the server:
-
-```bash
 install -D -m 0644 dist/opentelemetry.rb \
   /etc/puppetlabs/puppet/lib/puppet/reports/opentelemetry.rb
 ```
 
-The generated file is self-contained; `dist/` is not committed, because
-`lib/` is the single source of truth.
-
-### 3. Configure the collector endpoint
-
-Copy the sample configuration to `/etc/puppetlabs/puppet/otel.yaml`
-(next to `puppet.conf`):
+`dist/` is not committed, because `lib/` is the single source of truth. In
+this mode write `otel.yaml` yourself. Copy the sample configuration to
+`/etc/puppetlabs/puppet/otel.yaml` (next to `puppet.conf`):
 
 ```yaml
 endpoint: http://collector.example.com:4318
@@ -227,7 +256,7 @@ next tick.
 
 ```bash
 bundle install
-bundle exec rake spec        # unit tests
+bundle exec rake spec        # unit and rspec-puppet tests
 bundle exec rake dist:build  # build the single-file processor
 ```
 
