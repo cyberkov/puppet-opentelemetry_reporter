@@ -7,12 +7,17 @@ require 'open3'
 # verified as a file loaded by a separate Ruby process rather than through the
 # module's own load path.
 describe 'dist/opentelemetry.rb' do
-  root = File.expand_path('../..', __dir__)
-  dist = File.join(root, 'dist', 'opentelemetry.rb')
+  let(:root) { File.expand_path('../..', __dir__) }
+  let(:dist) { File.join(root, 'dist', 'opentelemetry.rb') }
 
+  # Building once is far cheaper than per example, so the hook is kept.
+  # rubocop:disable RSpec/BeforeAfterAll
   before(:all) do
-    Dir.chdir(root) { system('bundle exec rake dist:build', out: File::NULL, err: File::NULL) }
+    Dir.chdir(File.expand_path('../..', __dir__)) do
+      system('bundle exec rake dist:build', out: File::NULL, err: File::NULL)
+    end
   end
+  # rubocop:enable RSpec/BeforeAfterAll
 
   it 'is generated' do
     expect(File).to exist(dist)

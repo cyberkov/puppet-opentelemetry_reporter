@@ -1,37 +1,5 @@
 # frozen_string_literal: true
 
-# Mirrors Puppet::Util::Metric: #values returns [id, label, value] triples.
-class FakeMetric
-  attr_reader :values
-
-  def initialize(values)
-    @values = values
-  end
-end
-
-# A minimal stand-in for Puppet::Resource::Status, which the trace mapping
-# reads one span per entry from.
-class FakeResourceStatus
-  attr_reader :resource, :resource_type, :title, :evaluation_time, :file, :line, :time,
-              :changed, :out_of_sync, :failed, :skipped
-
-  def initialize(resource: 'File[/tmp/example]', resource_type: 'File', title: '/tmp/example',
-                 evaluation_time: 0.5, changed: true, out_of_sync: true, failed: false,
-                 skipped: false, file: '/etc/puppetlabs/code/site.pp', line: 12, time: nil)
-    @resource = resource
-    @resource_type = resource_type
-    @title = title
-    @evaluation_time = evaluation_time
-    @changed = changed
-    @out_of_sync = out_of_sync
-    @failed = failed
-    @skipped = skipped
-    @file = file
-    @line = line
-    @time = time
-  end
-end
-
 # A minimal stand-in for Puppet::Transaction::Report. Keeping it explicit makes
 # the tests independent of the Puppet version's report internals, while the
 # metrics themselves are asserted against a real in-memory exporter.
@@ -62,7 +30,7 @@ class FakeReport
       'File[/tmp/example]' => FakeResourceStatus.new,
       'Package[vim]' => FakeResourceStatus.new(
         resource: 'Package[vim]', resource_type: 'Package', title: 'vim',
-        evaluation_time: 2.0, changed: false, out_of_sync: false, line: 20,
+        evaluation_time: 2.0, changed: false, out_of_sync: false, line: 20
       ),
     }
   end

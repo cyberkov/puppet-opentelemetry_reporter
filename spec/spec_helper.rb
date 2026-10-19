@@ -10,4 +10,4 @@ end
 
 add_mocked_facts!
 
-Dir['./spec/support/spec/**/*.rb'].sort.each { |f| require f }
+Dir['./spec/support/spec/**/*.rb'].each { |f| require f }

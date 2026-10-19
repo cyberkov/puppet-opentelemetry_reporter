@@ -66,32 +66,33 @@ describe 'opentelemetry report processor' do
 
   it 'records metrics and flushes them' do
     write_config("endpoint: http://localhost:4318\n")
-    expect(PuppetOtel::SDK).to receive(:force_flush)
     report_for.process
+    expect(PuppetOtel::SDK).to have_received(:force_flush)
   end
 
   it 'does nothing when disabled' do
     write_config("enabled: false\n")
-    expect(PuppetOtel::SDK).not_to receive(:meter)
     report_for.process
+    expect(PuppetOtel::SDK).not_to have_received(:meter)
   end
 
   it 'does nothing when metrics are disabled' do
     write_config("metrics:\n  enabled: false\n")
-    expect(PuppetOtel::SDK).not_to receive(:meter)
     report_for.process
+    expect(PuppetOtel::SDK).not_to have_received(:meter)
   end
 
   it 'skips environments outside the allowlist' do
     write_config("environments:\n  - production\n")
-    expect(PuppetOtel::SDK).not_to receive(:meter)
     report_for(environment: 'development').process
+    expect(PuppetOtel::SDK).not_to have_received(:meter)
   end
 
   it 'processes environments inside the allowlist' do
     write_config("environments:\n  - production\n")
-    expect(PuppetOtel::SDK).to receive(:meter).and_return(nil)
+    allow(PuppetOtel::SDK).to receive(:meter).and_return(nil)
     report_for(environment: 'production').process
+    expect(PuppetOtel::SDK).to have_received(:meter)
   end
 
   it 'does not raise when the configuration file is absent' do
@@ -100,14 +101,16 @@ describe 'opentelemetry report processor' do
 
   it 'logs and does not raise when the SDK fails' do
     allow(PuppetOtel::SDK).to receive(:meter).and_raise(StandardError, 'boom')
-    expect(Puppet).to receive(:err).with(%r{could not process report})
+    allow(Puppet).to receive(:err)
     expect { report_for.process }.not_to raise_error
+    expect(Puppet).to have_received(:err).with(%r{could not process report})
   end
 
   it 'does not raise when the configuration file is malformed' do
     write_config("broken: [unclosed\n")
-    expect(Puppet).to receive(:err).with(%r{could not process report})
+    allow(Puppet).to receive(:err)
     expect { report_for.process }.not_to raise_error
+    expect(Puppet).to have_received(:err).with(%r{could not process report})
   end
 
   describe 'traces' do
