@@ -1,5 +1,5 @@
 {
-  "name": "puppet-opentelemetry_reporter",
+  "name": "voxpupuli-opentelemetry_reporter",
   "version": "0.1.0",
   "author": "Vox Pupuli",
   "summary": "Puppet report processor that exports Puppet run metrics (and optionally traces) via OpenTelemetry OTLP",
@@ -7,10 +7,41 @@
   "source": "https://github.com/voxpupuli/puppet-opentelemetry_reporter",
   "project_page": "https://github.com/voxpupuli/puppet-opentelemetry_reporter",
   "issues_url": "https://github.com/voxpupuli/puppet-opentelemetry_reporter/issues",
+  "tags": [
+    "opentelemetry",
+    "otel",
+    "reports",
+    "metrics",
+    "tracing",
+    "openvox"
+  ],
+  "operatingsystem_support": [
+    {
+      "operatingsystem": "RedHat",
+      "operatingsystemrelease": [
+        "8",
+        "9"
+      ]
+    },
+    {
+      "operatingsystem": "Debian",
+      "operatingsystemrelease": [
+        "11",
+        "12"
+      ]
+    },
+    {
+      "operatingsystem": "Ubuntu",
+      "operatingsystemrelease": [
+        "22.04",
+        "24.04"
+      ]
+    }
+  ],
   "requirements": [
     {
-      "name": "openvox",
-      "version_requirement": ">= 8.19.0 < 10.0.0"
+      "name": "puppet",
+      "version_requirement": ">= 8.0.0 < 10.0.0"
     }
   ],
   "dependencies": []

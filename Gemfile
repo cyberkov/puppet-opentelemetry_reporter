@@ -20,7 +20,7 @@ end
 
 gem 'rake', require: false
 
-gem 'openvox', ENV.fetch('OPENVOX_GEM_VERSION', ['>= 7', '< 10']), require: false, groups: [:test]
+gem 'openvox', ENV.fetch('OPENVOX_GEM_VERSION', ['>= 8', '< 10']), require: false, groups: [:test]
 
 # OpenTelemetry runtime dependencies.
 #
